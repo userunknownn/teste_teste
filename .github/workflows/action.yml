@@ -1,0 +1,45 @@
+on: 
+  push: 
+    branches: 
+    - main
+    
+jobs: 
+  merge_main_into_other:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checking out code
+        uses: actions/checkout@v2
+
+      - name: extract git commit data
+        uses: rlespinasse/git-commit-data-action@v1.x
+
+      - name: Raise PR
+        uses: peter-evans/create-pull-request@v3
+        with:
+          branch: main
+          base: other
+          title: "merging main into other"
+          committer: ${{ env.GIT_COMMIT_AUTHOR_NAME }} <${{ env.GIT_COMMIT_AUTHOR_EMAIL}}>
+          body: This is to show automatic PR creation
+          token: ${{ secrets.GITHUB_TOKEN }}
+          delete-branch: false
+
+      - name: Getting latest pull request number
+        id: get-pr-number
+        run: | 
+          LATEST_PR=$(curl -s -H "Authorization: Bearer ${{ secrets.APPROVER_PR_DEMO }}" \
+          https://api.github.com/repos/userunknownn/teste_teste/pulls\?state\=all\&per_page\=1 | jq '.[0].number');
+          echo "latest_pr=$LATEST_PR" >> $GITHUB_OUTPUT;
+  
+      - name: Approve PR
+        uses: juliangruber/approve-pull-request-action@v1
+        with:
+          github-token: ${{ secrets.APPROVER_PR_DEMO }}
+          number: ${{ steps.get-pr-number.outputs.latest_pr }} 
+      - name: Merge Pull request
+        uses: juliangruber/merge-pull-request-action@v1
+        with:
+          github-token: ${{ secrets.APPROVER_PR_DEMO }}
+          number: ${{ steps.get-pr-number.outputs.latest_pr }} 
+          method: squash
+
